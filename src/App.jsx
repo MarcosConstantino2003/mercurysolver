@@ -579,25 +579,10 @@ function App() {
         <div className="main-area">
           <header className="header">
             <button className="logo-container" type="button" onClick={handleNewChat}>
-              <div className="logo-icon">
-                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <linearGradient id="mercuryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#6d28d9" />
-                      <stop offset="100%" stopColor="#8b5cf6" />
-                    </linearGradient>
-                  </defs>
-                  <circle cx="50" cy="50" r="45" fill="url(#mercuryGradient)" opacity="0.15" />
-                  <path
-                    d="M50 12 L68 35 L83 31 L64 55 L73 55 L50 88 L41 61 L27 65 L40 41 L31 36 Z"
-                    fill="url(#mercuryGradient)"
-                    stroke="#ffffff"
-                    strokeWidth="1"
-                  />
-                  <circle cx="50" cy="25" r="7" fill="#ffffff" opacity="0.95" />
-                </svg>
-              </div>
-              <h1 className="logo-text">MercurySolver</h1>
+              <span className="logo-image-stack" aria-hidden="true">
+                <img src="/whitelogo.png" alt="" className="logo-image logo-image-light" />
+                <img src="/fulllogo.png" alt="" className="logo-image logo-image-dark" />
+              </span>
             </button>
 
             <div className="header-actions">
@@ -970,6 +955,16 @@ function App() {
       </div>
 
       <div className="floating-card" aria-label="Marcos Constantino links">
+        <a
+          href="https://github.com/MarcosConstantino2003"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GitHub"
+          className="floating-card-collapsed-icon"
+        >
+          <FiGithub />
+        </a>
+
         <div className="floating-card-content">
           <p className="copyright">Marcos Constantino © 2026</p>
           <div className="social-links">

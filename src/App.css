@@ -182,7 +182,6 @@
 .logo-container {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
   border: none;
   background: transparent;
   padding: 0;
@@ -190,21 +189,37 @@
   cursor: pointer;
 }
 
-.logo-icon {
-  width: 40px;
-  height: 40px;
+.logo-image-stack {
+  position: relative;
+  width: 248px;
+  height: 60px;
+  display: inline-block;
 }
 
-.logo-text {
-  margin: 0;
-  font-size: 1.3rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--text-light);
+.logo-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: left center;
+  transition: opacity 0.28s ease;
 }
 
-.app.dark .logo-text {
-  color: var(--text-dark);
+.app.light .logo-image-light {
+  opacity: 1;
+}
+
+.app.light .logo-image-dark {
+  opacity: 0;
+}
+
+.app.dark .logo-image-light {
+  opacity: 0;
+}
+
+.app.dark .logo-image-dark {
+  opacity: 1;
 }
 
 .theme-toggle {
@@ -1083,6 +1098,30 @@
   white-space: nowrap;
 }
 
+.floating-card-collapsed-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  color: var(--accent);
+  border: 1px solid #e8ddff;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.floating-card-collapsed-icon:hover {
+  background: #f5f0ff;
+  transform: translateY(-1px);
+}
+
+.floating-card:hover .floating-card-collapsed-icon {
+  opacity: 0;
+  transform: scale(0.92);
+  pointer-events: none;
+}
+
 .floating-card .copyright,
 .floating-card .social-links {
   opacity: 0;
@@ -1101,6 +1140,12 @@
 .app.dark .floating-card {
   background: rgba(20, 20, 28, 0.62);
   border-color: rgba(139, 92, 246, 0.32);
+}
+
+.app.dark .floating-card-collapsed-icon {
+  background: #1a1525;
+  border-color: #3b2d57;
+  color: #c4b5fd;
 }
 
 .copyright {
@@ -1225,6 +1270,15 @@
 
   .header {
     padding: 1rem 1.1rem;
+  }
+
+  .logo-image {
+    height: 100%;
+  }
+
+  .logo-image-stack {
+    width: 208px;
+    height: 52px;
   }
 
   .floating-card {
