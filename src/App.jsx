@@ -14,8 +14,16 @@ import {
   FiFileText,
   FiUploadCloud,
   FiX,
+  FiEdit3,
 } from 'react-icons/fi'
 import './App.css'
+
+const mathSymbols = [
+  'π', '∞', '√', '∑', '∫', '∆', '≈', '≠', '≤', '≥',
+  '+', '−', '×', '÷', '=', '%', '^', '(', ')', '[',
+  ']', '{', '}', '|', 'θ', 'α', 'β', 'γ', 'λ', 'μ',
+  'sin', 'cos', 'tan', 'log', 'ln', 'x²', 'x³', '10^', 'e^', '→',
+]
 
 function App() {
   const [darkMode, setDarkMode] = useState(false)
@@ -24,6 +32,7 @@ function App() {
   const [messages, setMessages] = useState([])
   const [isSending, setIsSending] = useState(false)
   const [pendingAttachments, setPendingAttachments] = useState([])
+  const [isMathKeyboardOpen, setIsMathKeyboardOpen] = useState(false)
   const [isDragActive, setIsDragActive] = useState(false)
   const hasMessages = messages.length > 0
   const inputRef = useRef(null)
@@ -228,6 +237,29 @@ function App() {
     if (e.dataTransfer.files?.length) {
       addAttachments(e.dataTransfer.files)
     }
+  }
+
+  const insertMathSymbol = (symbol) => {
+    const input = inputRef.current
+    if (!input) {
+      setMessage((currentMessage) => `${currentMessage}${symbol}`)
+      return
+    }
+
+    const selectionStart = input.selectionStart ?? message.length
+    const selectionEnd = input.selectionEnd ?? message.length
+
+    setMessage((currentMessage) => {
+      const before = currentMessage.slice(0, selectionStart)
+      const after = currentMessage.slice(selectionEnd)
+      return `${before}${symbol}${after}`
+    })
+
+    requestAnimationFrame(() => {
+      const nextCursor = selectionStart + symbol.length
+      input.focus()
+      input.setSelectionRange(nextCursor, nextCursor)
+    })
   }
 
   useEffect(() => {
@@ -467,6 +499,30 @@ function App() {
                   <FiSend />
                 </button>
               </div>
+
+              <button
+                type="button"
+                className={`math-toggle-button ${isMathKeyboardOpen ? 'active' : ''}`}
+                onClick={() => setIsMathKeyboardOpen((currentState) => !currentState)}
+              >
+                <FiEdit3 />
+                <span>Math Input</span>
+              </button>
+
+              {isMathKeyboardOpen && (
+                <div className="math-keyboard" aria-label="Teclado matemático">
+                  {mathSymbols.map((symbol) => (
+                    <button
+                      key={symbol}
+                      type="button"
+                      className="math-key"
+                      onClick={() => insertMathSymbol(symbol)}
+                    >
+                      {symbol}
+                    </button>
+                  ))}
+                </div>
+              )}
             </form>
           </main>
         </div>

@@ -380,6 +380,91 @@
   gap: 0.7rem;
 }
 
+.math-toggle-button {
+  width: fit-content;
+  margin: 0 auto;
+  border: 1px solid #e8ddff;
+  background: #faf8ff;
+  color: #5b21b6;
+  border-radius: 999px;
+  padding: 0.42rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
+}
+
+.math-toggle-button:hover {
+  background: #f3ecff;
+  transform: translateY(-1px);
+}
+
+.math-toggle-button.active {
+  background: #ede9fe;
+  border-color: #c4b5fd;
+}
+
+.app.dark .math-toggle-button {
+  background: #1b1727;
+  border-color: #3f315b;
+  color: #d4c7ff;
+}
+
+.app.dark .math-toggle-button:hover {
+  background: #231d33;
+}
+
+.app.dark .math-toggle-button.active {
+  background: #2b2240;
+}
+
+.math-keyboard {
+  width: min(920px, calc(100% - 4rem));
+  margin: 0 auto;
+  border: 1px solid #e8ddff;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  padding: 0.6rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+  gap: 0.45rem;
+}
+
+.math-key {
+  border: 1px solid #e7defa;
+  background: #ffffff;
+  color: #4c1d95;
+  border-radius: 10px;
+  min-height: 36px;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.88rem;
+  transition: all 0.2s ease;
+}
+
+.math-key:hover {
+  background: #f5f0ff;
+  border-color: #d8b4fe;
+}
+
+.app.dark .math-keyboard {
+  background: rgba(20, 20, 28, 0.94);
+  border-color: #3f315b;
+}
+
+.app.dark .math-key {
+  background: #1d1729;
+  border-color: #3f315b;
+  color: #e9ddff;
+}
+
+.app.dark .math-key:hover {
+  background: #292039;
+  border-color: #8b5cf6;
+}
+
 .drop-zone {
   width: min(860px, calc(100% - 4rem));
   margin: 0 auto;
@@ -793,6 +878,11 @@
 
   .drop-zone {
     width: calc(100% - 1.2rem);
+  }
+
+  .math-keyboard {
+    width: calc(100% - 1.2rem);
+    grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
   }
 
   .chat-container.has-messages .input-container {
