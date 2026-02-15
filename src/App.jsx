@@ -15,7 +15,10 @@ import {
   FiUploadCloud,
   FiX,
   FiEdit3,
+  FiLogOut,
+  FiLogIn,
 } from 'react-icons/fi'
+import { FaGoogle } from 'react-icons/fa'
 import './App.css'
 
 const mathSymbols = [
@@ -28,6 +31,23 @@ const mathSymbols = [
 function App() {
   const [darkMode, setDarkMode] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [user, setUser] = useState(null)
+  const [activeView, setActiveView] = useState('chat')
+  const [authMode, setAuthMode] = useState('login')
+  const [authLoading, setAuthLoading] = useState(false)
+  const [authNotice, setAuthNotice] = useState('')
+  const [showProfilePanel, setShowProfilePanel] = useState(false)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileNotice, setProfileNotice] = useState('')
+  const [authForm, setAuthForm] = useState({
+    email: '',
+    password: '',
+    verifyCode: '',
+    name: '',
+    birthYear: '',
+    currentPassword: '',
+    newPassword: '',
+  })
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState([])
   const [isSending, setIsSending] = useState(false)
@@ -39,6 +59,7 @@ function App() {
   const fileInputRef = useRef(null)
   const chatMessagesRef = useRef(null)
   const attachmentsSnapshotRef = useRef({ messages: [], pending: [] })
+  const isAuthenticated = Boolean(user?.email)
 
   const isAllowedFile = (file) => {
     return file.type.startsWith('image/') || file.type === 'application/pdf'
@@ -72,6 +93,33 @@ function App() {
 
   const toggleTheme = () => {
     setDarkMode(!darkMode)
+  }
+
+  const requestJson = async (url, options = {}) => {
+    const response = await fetch(url, {
+      credentials: 'include',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      },
+    })
+
+    const raw = await response.text()
+    let result = null
+    if (raw) {
+      try {
+        result = JSON.parse(raw)
+      } catch {
+        result = { error: raw }
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error(result?.error || `Error HTTP ${response.status}`)
+    }
+
+    return result
   }
 
   const fileToBase64 = (file) => {
@@ -198,11 +246,160 @@ function App() {
     }
   }
 
+  const handleAuthInput = (field, value) => {
+    setAuthForm((current) => ({ ...current, [field]: value }))
+  }
+
+  const handleRegister = async (e) => {
+    e.preventDefault()
+    console.info('[AUTH][REGISTER] Intentando registro', { email: authForm.email })
+    setAuthNotice('')
+    setAuthLoading(true)
+
+    try {
+      const result = await requestJson('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: authForm.email,
+          password: authForm.password,
+        }),
+      })
+
+      setAuthMode('verify')
+      setAuthNotice(result?.message || 'Código enviado a tu mail')
+      console.info('[AUTH][REGISTER] Registro OK, código enviado')
+    } catch (error) {
+      console.error('[AUTH][REGISTER] Error en registro', error)
+      setAuthNotice(error.message)
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  const handleVerify = async (e) => {
+    e.preventDefault()
+    console.info('[AUTH][VERIFY] Intentando verificación', { email: authForm.email })
+    setAuthNotice('')
+    setAuthLoading(true)
+
+    try {
+      const result = await requestJson('/api/auth/verify', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: authForm.email,
+          code: authForm.verifyCode,
+        }),
+      })
+
+      setAuthMode('login')
+      setAuthNotice(result?.message || 'Cuenta verificada, ya puedes iniciar sesión')
+      setAuthForm((current) => ({ ...current, verifyCode: '' }))
+      console.info('[AUTH][VERIFY] Verificación OK')
+    } catch (error) {
+      console.error('[AUTH][VERIFY] Error en verificación', error)
+      setAuthNotice(error.message)
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  const handleLogin = async (e) => {
+    e.preventDefault()
+    console.info('[AUTH][LOGIN] Intentando login', { email: authForm.email })
+    setAuthNotice('')
+    setAuthLoading(true)
+
+    try {
+      const result = await requestJson('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: authForm.email,
+          password: authForm.password,
+        }),
+      })
+
+      setUser(result?.user || null)
+      setShowProfilePanel(false)
+      setActiveView('chat')
+      setAuthNotice('')
+      console.info('[AUTH][LOGIN] Login OK')
+    } catch (error) {
+      console.error('[AUTH][LOGIN] Error en login', error)
+      setAuthNotice(error.message)
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    console.info('[AUTH][LOGOUT] Ejecutando logout')
+    try {
+      await requestJson('/api/auth/logout', { method: 'POST', body: '{}' })
+    } catch {
+      // noop
+    }
+
+    setUser(null)
+    setShowProfilePanel(false)
+    setActiveView('chat')
+    setMessages([])
+    setMessage('')
+    setPendingAttachments([])
+  }
+
+  const handleProfileSave = async (e) => {
+    e.preventDefault()
+    setProfileNotice('')
+    setProfileLoading(true)
+
+    try {
+      const result = await requestJson('/api/auth/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: authForm.name,
+          birthYear: authForm.birthYear || null,
+        }),
+      })
+
+      setUser(result?.user || user)
+      setProfileNotice('Perfil actualizado')
+    } catch (error) {
+      setProfileNotice(error.message)
+    } finally {
+      setProfileLoading(false)
+    }
+  }
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault()
+    setProfileNotice('')
+    setProfileLoading(true)
+
+    try {
+      const result = await requestJson('/api/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          currentPassword: authForm.currentPassword,
+          newPassword: authForm.newPassword,
+        }),
+      })
+
+      setProfileNotice(result?.message || 'Contraseña actualizada')
+      setAuthForm((current) => ({ ...current, currentPassword: '', newPassword: '' }))
+    } catch (error) {
+      setProfileNotice(error.message)
+    } finally {
+      setProfileLoading(false)
+    }
+  }
+
   const handleNewChat = () => {
     const messageAttachments = messages.flatMap((chatMessage) => chatMessage.attachments || [])
     revokeAttachments(messageAttachments)
     revokeAttachments(pendingAttachments)
 
+    setActiveView('chat')
+    setShowProfilePanel(false)
     setMessages([])
     setMessage('')
     setPendingAttachments([])
@@ -267,6 +464,37 @@ function App() {
   }, [messages, pendingAttachments])
 
   useEffect(() => {
+    const bootstrapSession = async () => {
+      try {
+        const result = await requestJson('/api/auth/me', { method: 'GET' })
+        if (result?.user) {
+          setUser(result.user)
+          setAuthForm((current) => ({
+            ...current,
+            email: result.user.email || current.email,
+            name: result.user.name || '',
+            birthYear: result.user.birthYear || '',
+          }))
+        }
+      } catch {
+        // no session
+      }
+    }
+
+    bootstrapSession()
+  }, [])
+
+  useEffect(() => {
+    if (!user) return
+    setAuthForm((current) => ({
+      ...current,
+      email: user.email || current.email,
+      name: user.name || '',
+      birthYear: user.birthYear || '',
+    }))
+  }, [user])
+
+  useEffect(() => {
     if (!hasMessages || !chatMessagesRef.current) return
 
     requestAnimationFrame(() => {
@@ -314,16 +542,43 @@ function App() {
               {!sidebarCollapsed && <span>Premium</span>}
             </button>
 
-            <button className="sidebar-item sidebar-profile" type="button" aria-label="Perfil (próximamente)">
-              <FiUser />
-              {!sidebarCollapsed && <span>Perfil</span>}
-            </button>
+            {!isAuthenticated ? (
+              <button
+                className="sidebar-item sidebar-login"
+                type="button"
+                onClick={() => {
+                  setAuthMode('login')
+                  setAuthNotice('')
+                  setActiveView('auth')
+                }}
+              >
+                <FiLogIn />
+                {!sidebarCollapsed && <span>Log in</span>}
+              </button>
+            ) : (
+              <>
+                <button
+                  className="sidebar-item sidebar-profile"
+                  type="button"
+                  aria-label="Perfil"
+                  onClick={() => setShowProfilePanel((current) => !current)}
+                >
+                  <FiUser />
+                  {!sidebarCollapsed && <span>Perfil</span>}
+                </button>
+
+                <button className="sidebar-item sidebar-logout" type="button" onClick={handleLogout}>
+                  <FiLogOut />
+                  {!sidebarCollapsed && <span>Log out</span>}
+                </button>
+              </>
+            )}
           </div>
         </aside>
 
         <div className="main-area">
           <header className="header">
-            <div className="logo-container">
+            <button className="logo-container" type="button" onClick={handleNewChat}>
               <div className="logo-icon">
                 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
                   <defs>
@@ -343,14 +598,144 @@ function App() {
                 </svg>
               </div>
               <h1 className="logo-text">MercurySolver</h1>
-            </div>
-
-            <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
-              {darkMode ? <FiSun /> : <FiMoon />}
             </button>
+
+            <div className="header-actions">
+              <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+                {darkMode ? <FiSun /> : <FiMoon />}
+              </button>
+            </div>
           </header>
 
-          <main className={`chat-container ${hasMessages ? 'has-messages' : 'no-messages'}`}>
+          {activeView === 'auth' && !isAuthenticated ? (
+            <main className="auth-page">
+              <div className="auth-page-top-tabs">
+                <button
+                  type="button"
+                  className={`auth-top-tab ${authMode === 'login' ? 'active' : ''}`}
+                  onClick={() => {
+                    setAuthMode('login')
+                    setAuthNotice('')
+                  }}
+                >
+                  Iniciar sesión
+                </button>
+                <button
+                  type="button"
+                  className={`auth-top-tab ${authMode === 'register' || authMode === 'verify' ? 'active' : ''}`}
+                  onClick={() => {
+                    setAuthMode('register')
+                    setAuthNotice('')
+                  }}
+                >
+                  Registrarse
+                </button>
+              </div>
+
+              <section className="auth-card auth-page-card">
+                <h2>
+                  {authMode === 'register'
+                    ? 'Crear cuenta'
+                    : authMode === 'verify'
+                      ? 'Verificar código'
+                      : 'Iniciar sesión'}
+                </h2>
+
+                {authNotice && <p className="auth-notice">{authNotice}</p>}
+
+                {authMode === 'register' && (
+                  <form className="auth-form" onSubmit={handleRegister}>
+                    <input
+                      type="email"
+                      placeholder="Mail"
+                      autoComplete="email"
+                      value={authForm.email}
+                      onChange={(e) => handleAuthInput('email', e.target.value)}
+                    />
+                    <input
+                      type="password"
+                      placeholder="Contraseña (mínimo 8 caracteres)"
+                      autoComplete="new-password"
+                      value={authForm.password}
+                      onChange={(e) => handleAuthInput('password', e.target.value)}
+                    />
+                    <button type="submit" disabled={authLoading}>Registrarme</button>
+                  </form>
+                )}
+
+                {authMode === 'verify' && (
+                  <form className="auth-form" onSubmit={handleVerify}>
+                    <input
+                      type="email"
+                      placeholder="Mail"
+                      autoComplete="email"
+                      value={authForm.email}
+                      onChange={(e) => handleAuthInput('email', e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Código de 6 dígitos"
+                      autoComplete="one-time-code"
+                      value={authForm.verifyCode}
+                      onChange={(e) => handleAuthInput('verifyCode', e.target.value)}
+                      maxLength={6}
+                    />
+                    <button type="submit" disabled={authLoading}>Confirmar código</button>
+                  </form>
+                )}
+
+                {authMode === 'login' && (
+                  <form className="auth-form" onSubmit={handleLogin}>
+                    <input
+                      type="email"
+                      placeholder="Mail"
+                      autoComplete="username"
+                      value={authForm.email}
+                      onChange={(e) => handleAuthInput('email', e.target.value)}
+                    />
+
+                    <div className="auth-password-row">
+                      <span className="auth-field-label">Contraseña</span>
+                      <button
+                        type="button"
+                        className="auth-link"
+                        onClick={() => setAuthNotice('Recuperación de contraseña: próximamente')}
+                      >
+                        ¿Olvidaste contraseña?
+                      </button>
+                    </div>
+
+                    <input
+                      type="password"
+                      placeholder="Contraseña"
+                      autoComplete="current-password"
+                      value={authForm.password}
+                      onChange={(e) => handleAuthInput('password', e.target.value)}
+                    />
+                    <button type="submit" disabled={authLoading}>Entrar</button>
+                  </form>
+                )}
+
+                <div className="auth-separator" aria-hidden="true">
+                  <span>ó</span>
+                </div>
+
+                <button
+                  type="button"
+                  className="google-auth-button"
+                  onClick={() => setAuthNotice('Ingreso con Google: próximamente')}
+                >
+                  <FaGoogle />
+                  <span>
+                    {authMode === 'login'
+                      ? 'Iniciá sesión con Google'
+                      : 'Registrarte con Google'}
+                  </span>
+                </button>
+              </section>
+            </main>
+          ) : (
+            <main className={`chat-container ${hasMessages ? 'has-messages' : 'no-messages'}`}>
             {!hasMessages ? (
               <section className="welcome-only" aria-live="polite">
                 <h2>Bienvenido</h2>
@@ -524,7 +909,63 @@ function App() {
                 </div>
               )}
             </form>
-          </main>
+            </main>
+          )}
+
+          {isAuthenticated && showProfilePanel && (
+            <aside className="profile-panel">
+              <h3>Perfil</h3>
+              <p><strong>Mail:</strong> {user.email}</p>
+
+              {profileNotice && <p className="profile-notice">{profileNotice}</p>}
+
+              <form className="profile-form" onSubmit={handleProfileSave}>
+                <label>
+                  Nombre
+                  <input
+                    type="text"
+                    autoComplete="name"
+                    value={authForm.name}
+                    onChange={(e) => handleAuthInput('name', e.target.value)}
+                    placeholder="(vacío por defecto)"
+                  />
+                </label>
+                <label>
+                  Año de nacimiento
+                  <input
+                    type="number"
+                    value={authForm.birthYear}
+                    onChange={(e) => handleAuthInput('birthYear', e.target.value)}
+                    placeholder="(vacío por defecto)"
+                  />
+                </label>
+                <button type="submit" disabled={profileLoading}>Guardar perfil</button>
+              </form>
+
+              <form className="profile-form" onSubmit={handlePasswordChange}>
+                <label>
+                  Contraseña actual
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    value={authForm.currentPassword}
+                    onChange={(e) => handleAuthInput('currentPassword', e.target.value)}
+                  />
+                </label>
+                <label>
+                  Nueva contraseña
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={authForm.newPassword}
+                    onChange={(e) => handleAuthInput('newPassword', e.target.value)}
+                    placeholder="Mínimo 8 caracteres"
+                  />
+                </label>
+                <button type="submit" disabled={profileLoading}>Cambiar contraseña</button>
+              </form>
+            </aside>
+          )}
         </div>
       </div>
 
