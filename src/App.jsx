@@ -20,6 +20,11 @@ import {
 } from 'react-icons/fi'
 import { FaGoogle } from 'react-icons/fa'
 import './App.css'
+import ReactMarkdown from 'react-markdown'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import remarkGfm from 'remark-gfm'
+import 'katex/dist/katex.min.css'
 
 const mathSymbols = [
   'π', '∞', '√', '∑', '∫', '∆', '≈', '≠', '≤', '≥',
@@ -460,6 +465,17 @@ function App() {
   }
 
   useEffect(() => {
+    const handlePaste = (e) => {
+      if (e.clipboardData?.files?.length) {
+        addAttachments(e.clipboardData.files)
+      }
+    }
+
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [])
+
+  useEffect(() => {
     attachmentsSnapshotRef.current = { messages, pending: pendingAttachments }
   }, [messages, pendingAttachments])
 
@@ -721,179 +737,188 @@ function App() {
             </main>
           ) : (
             <main className={`chat-container ${hasMessages ? 'has-messages' : 'no-messages'}`}>
-            {!hasMessages ? (
-              <section className="welcome-only" aria-live="polite">
-                <h2>Bienvenido</h2>
-              </section>
-            ) : (
-              <section className="chat-messages" aria-live="polite" ref={chatMessagesRef}>
-                {messages.map((chatMessage) => (
-                  <article
-                    key={chatMessage.id}
-                    className={`message-item ${chatMessage.role === 'assistant' ? 'assistant' : 'user'}`}
-                  >
-                    {chatMessage.text && <p className="message-text">{chatMessage.text}</p>}
+              {!hasMessages ? (
+                <section className="welcome-only" aria-live="polite">
+                  <h2>Bienvenido</h2>
+                </section>
+              ) : (
+                <section className="chat-messages" aria-live="polite" ref={chatMessagesRef}>
+                  {messages.map((chatMessage) => (
+                    <article
+                      key={chatMessage.id}
+                      className={`message-item ${chatMessage.role === 'assistant' ? 'assistant' : 'user'}`}
+                    >
+                      {chatMessage.text && (
+                        <div className="message-text">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkMath, remarkGfm]}
+                            rehypePlugins={[rehypeKatex]}
+                          >
+                            {chatMessage.text}
+                          </ReactMarkdown>
+                        </div>
+                      )}
 
-                    {chatMessage.attachments?.length > 0 && (
-                      <div className="message-attachments">
-                        {chatMessage.attachments.map((attachment) => {
-                          const isImage = attachment.type.startsWith('image/')
+                      {chatMessage.attachments?.length > 0 && (
+                        <div className="message-attachments">
+                          {chatMessage.attachments.map((attachment) => {
+                            const isImage = attachment.type.startsWith('image/')
 
-                          if (isImage) {
+                            if (isImage) {
+                              return (
+                                <img
+                                  key={attachment.id}
+                                  src={attachment.url}
+                                  alt={attachment.name}
+                                  className="message-image"
+                                />
+                              )
+                            }
+
                             return (
-                              <img
+                              <a
                                 key={attachment.id}
-                                src={attachment.url}
-                                alt={attachment.name}
-                                className="message-image"
-                              />
+                                href={attachment.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="message-pdf"
+                              >
+                                <FiFileText />
+                                <span>{attachment.name}</span>
+                              </a>
                             )
-                          }
+                          })}
+                        </div>
+                      )}
+                    </article>
+                  ))}
 
-                          return (
-                            <a
-                              key={attachment.id}
-                              href={attachment.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="message-pdf"
-                            >
-                              <FiFileText />
-                              <span>{attachment.name}</span>
-                            </a>
-                          )
-                        })}
-                      </div>
+                  {isSending && (
+                    <article className="message-item assistant typing">
+                      <p className="message-text">Gemini está escribiendo…</p>
+                    </article>
+                  )}
+                </section>
+              )}
+
+              <form className="composer" onSubmit={handleSendMessage}>
+                {!hasMessages && (
+                  <div
+                    className={`drop-zone ${isDragActive ? 'active' : ''}`}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      setIsDragActive(true)
+                    }}
+                    onDragLeave={() => setIsDragActive(false)}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        fileInputRef.current?.click()
+                      }
+                    }}
+                  >
+                    <FiUploadCloud className="drop-zone-icon" />
+                    <span>Arrastar foto o PDF.</span>
+                    {pendingAttachments.length > 0 && (
+                      <small>{pendingAttachments.length} archivo(s) listo(s) para enviar</small>
                     )}
-                  </article>
-                ))}
-
-                {isSending && (
-                  <article className="message-item assistant typing">
-                    <p className="message-text">Gemini está escribiendo…</p>
-                  </article>
+                  </div>
                 )}
-              </section>
-            )}
 
-            <form className="composer" onSubmit={handleSendMessage}>
-              {!hasMessages && (
                 <div
-                  className={`drop-zone ${isDragActive ? 'active' : ''}`}
+                  className={`input-container ${isDragActive ? 'drag-active' : ''}`}
                   onDragOver={(e) => {
                     e.preventDefault()
                     setIsDragActive(true)
                   }}
                   onDragLeave={() => setIsDragActive(false)}
                   onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      fileInputRef.current?.click()
-                    }
-                  }}
                 >
-                  <FiUploadCloud className="drop-zone-icon" />
-                  <span>Arrastar foto o PDF.</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    multiple
+                    onChange={handlePickFiles}
+                    hidden
+                  />
+
+                  <div className="attach-wrapper">
+                    <button
+                      type="button"
+                      className="attach-button"
+                      aria-label="Adjuntar archivo"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <FiPlus />
+                    </button>
+                    <span className="attach-tooltip">Adjuntar imagen/PDF</span>
+                  </div>
+
                   {pendingAttachments.length > 0 && (
-                    <small>{pendingAttachments.length} archivo(s) listo(s) para enviar</small>
+                    <div className="pending-attachments" aria-label="Archivos adjuntos listos">
+                      {pendingAttachments.map((attachment) => (
+                        <span key={attachment.id} className="pending-attachment-chip">
+                          <span className="pending-attachment-name">{attachment.name}</span>
+                          <button
+                            type="button"
+                            className="remove-attachment"
+                            aria-label={`Quitar ${attachment.name}`}
+                            onClick={() => handleRemovePendingAttachment(attachment.id)}
+                          >
+                            <FiX />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
                   )}
-                </div>
-              )}
 
-              <div
-                className={`input-container ${isDragActive ? 'drag-active' : ''}`}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  setIsDragActive(true)
-                }}
-                onDragLeave={() => setIsDragActive(false)}
-                onDrop={handleDrop}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,application/pdf"
-                  multiple
-                  onChange={handlePickFiles}
-                  hidden
-                />
-
-                <div className="attach-wrapper">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Escribe tu mensaje..."
+                    className="message-input"
+                  />
                   <button
-                    type="button"
-                    className="attach-button"
-                    aria-label="Adjuntar archivo"
-                    onClick={() => fileInputRef.current?.click()}
+                    type="submit"
+                    className="send-button"
+                    aria-label="Send message"
+                    disabled={isSending}
                   >
-                    <FiPlus />
+                    <FiSend />
                   </button>
-                  <span className="attach-tooltip">Adjuntar imagen/PDF</span>
                 </div>
 
-                {pendingAttachments.length > 0 && (
-                  <div className="pending-attachments" aria-label="Archivos adjuntos listos">
-                    {pendingAttachments.map((attachment) => (
-                      <span key={attachment.id} className="pending-attachment-chip">
-                        <span className="pending-attachment-name">{attachment.name}</span>
-                        <button
-                          type="button"
-                          className="remove-attachment"
-                          aria-label={`Quitar ${attachment.name}`}
-                          onClick={() => handleRemovePendingAttachment(attachment.id)}
-                        >
-                          <FiX />
-                        </button>
-                      </span>
+                <button
+                  type="button"
+                  className={`math-toggle-button ${isMathKeyboardOpen ? 'active' : ''}`}
+                  onClick={() => setIsMathKeyboardOpen((currentState) => !currentState)}
+                >
+                  <FiEdit3 />
+                  <span>Math Input</span>
+                </button>
+
+                {isMathKeyboardOpen && (
+                  <div className="math-keyboard" aria-label="Teclado matemático">
+                    {mathSymbols.map((symbol) => (
+                      <button
+                        key={symbol}
+                        type="button"
+                        className="math-key"
+                        onClick={() => insertMathSymbol(symbol)}
+                      >
+                        {symbol}
+                      </button>
                     ))}
                   </div>
                 )}
-
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Escribe tu mensaje..."
-                  className="message-input"
-                />
-                <button
-                  type="submit"
-                  className="send-button"
-                  aria-label="Send message"
-                  disabled={isSending}
-                >
-                  <FiSend />
-                </button>
-              </div>
-
-              <button
-                type="button"
-                className={`math-toggle-button ${isMathKeyboardOpen ? 'active' : ''}`}
-                onClick={() => setIsMathKeyboardOpen((currentState) => !currentState)}
-              >
-                <FiEdit3 />
-                <span>Math Input</span>
-              </button>
-
-              {isMathKeyboardOpen && (
-                <div className="math-keyboard" aria-label="Teclado matemático">
-                  {mathSymbols.map((symbol) => (
-                    <button
-                      key={symbol}
-                      type="button"
-                      className="math-key"
-                      onClick={() => insertMathSymbol(symbol)}
-                    >
-                      {symbol}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </form>
+              </form>
             </main>
           )}
 
