@@ -28,6 +28,7 @@ export default async function handler(req, res) {
 
     if (result.rows.length === 0) {
       console.warn('[AUTH][LOGIN] user not found', { email })
+      await new Promise((r) => setTimeout(r, 1000))
       return res.status(401).json({ error: 'Credenciales inválidas' })
     }
 
@@ -35,6 +36,7 @@ export default async function handler(req, res) {
     const valid = await bcrypt.compare(password, user.password_hash)
     if (!valid) {
       console.warn('[AUTH][LOGIN] invalid password', { email })
+      await new Promise((r) => setTimeout(r, 1000))
       return res.status(401).json({ error: 'Credenciales inválidas' })
     }
 

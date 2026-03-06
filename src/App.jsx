@@ -341,7 +341,6 @@ function App() {
     try {
       await requestJson('/api/auth/logout', { method: 'POST', body: '{}' })
     } catch {
-      // noop
     }
 
     setUser(null)
@@ -493,7 +492,6 @@ function App() {
           }))
         }
       } catch {
-        // no session
       }
     }
 
@@ -594,12 +592,12 @@ function App() {
 
         <div className="main-area">
           <header className="header">
-            <button className="logo-container" type="button" onClick={handleNewChat}>
+            <div className="logo-container">
               <span className="logo-image-stack" aria-hidden="true">
-                <img src="/whitelogo.png" alt="" className="logo-image logo-image-light" />
-                <img src="/fulllogo.png" alt="" className="logo-image logo-image-dark" />
+                <img src="/logo-light.svg" alt="" className="logo-image logo-image-light" />
+                <img src="/logo-dark.svg" alt="" className="logo-image logo-image-dark" />
               </span>
-            </button>
+            </div>
 
             <div className="header-actions">
               <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
@@ -795,7 +793,14 @@ function App() {
 
                   {isSending && (
                     <article className="message-item assistant typing">
-                      <p className="message-text">Gemini está escribiendo…</p>
+                      <div className="message-text typing-indicator">
+                        <span>Pensando</span>
+                        <div className="typing-dots">
+                          <span className="dot">.</span>
+                          <span className="dot">.</span>
+                          <span className="dot">.</span>
+                        </div>
+                      </div>
                     </article>
                   )}
                 </section>

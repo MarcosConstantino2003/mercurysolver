@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai'
+import { readSession } from '../_lib/auth.js'
 
 const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
 
@@ -47,6 +48,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  const session = readSession(req)
+  if (!session || !session.userId) {
+    return res.status(401).json({ error: 'Inicia sesión para chatear' })
+  }
+
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
     return res.status(500).json({ error: 'GEMINI_API_KEY no configurada en Vercel' })
@@ -62,9 +68,19 @@ export default async function handler(req, res) {
 
   const { message, history, attachments } = body
 
-  const normalizedHistory = Array.isArray(history) ? history : []
-  const normalizedAttachments = Array.isArray(attachments) ? attachments : []
-  const textMessage = typeof message === 'string' ? message.trim() : ''
+  let normalizedHistory = Array.isArray(history) ? history : []
+  let normalizedAttachments = Array.isArray(attachments) ? attachments : []
+  let textMessage = typeof message === 'string' ? message.trim() : ''
+
+  if (textMessage.length > 5000) {
+    textMessage = textMessage.substring(0, 5000)
+  }
+  if (normalizedHistory.length > 50) {
+    normalizedHistory = normalizedHistory.slice(-50)
+  }
+  if (normalizedAttachments.length > 5) {
+    normalizedAttachments = normalizedAttachments.slice(0, 5)
+  }
 
   if (!textMessage && normalizedAttachments.length === 0) {
     return res.status(400).json({ error: 'Mensaje o adjuntos requeridos' })
